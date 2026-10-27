@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: windlens-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ELEXON_API_BASE=https://data.elexon.co.uk/bmrs/api/v1
+      - DEFAULT_CUTOFF_TIME=12:00
+      - DEFAULT_START_DATE=2026-01-01
+      - DEFAULT_END_DATE=2026-01-31
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: windlens-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
