@@ -83,26 +83,42 @@ export const DataTable: React.FC<DataTableProps> = ({
   const paginatedData = sortedData.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="tab-scroll-container">
-      <div className="ledger-card">
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Settlement Period Interval Ledger</h1>
+          <p className="page-subtitle">
+            Complete audit trail of all 1,488 half-hourly settlement intervals across January 2026 with exact timestamp pairing
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <button className="btn-secondary" onClick={onExportCsv}>
+            <Download size={14} />
+            Export Full Dataset (CSV)
+          </button>
+        </div>
+      </div>
+
+      <div className="surface-card">
         {/* Toolbar */}
-        <div className="ledger-toolbar">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+        <div className="surface-card-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, flexWrap: "wrap" }}>
             {/* Search */}
             <div style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
-              background: "var(--bg-root)",
+              gap: "8px",
+              background: "var(--bg-canvas)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-sm)",
-              padding: "4px 8px",
-              width: "240px"
+              padding: "8px 14px",
+              width: "300px"
             }}>
-              <Search size={13} color="var(--text-muted)" />
+              <Search size={15} color="var(--text-muted)" />
               <input
                 type="text"
-                placeholder="Search interval (e.g. 2026-01-15)..."
+                placeholder="Search date or interval (e.g. 2026-01-15)..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -113,22 +129,23 @@ export const DataTable: React.FC<DataTableProps> = ({
                   border: "none",
                   outline: "none",
                   color: "var(--text-primary)",
-                  fontSize: "0.74rem",
+                  fontSize: "0.82rem",
                   width: "100%"
                 }}
               />
             </div>
 
-            {/* Filter by Match Status */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Filter size={12} color="var(--text-muted)" />
+            {/* Status Filter */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Filter size={14} color="var(--text-muted)" />
               <select
-                className="control-select"
+                className="cutoff-select"
                 style={{
-                  background: "var(--bg-root)",
+                  background: "var(--bg-canvas)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-sm)",
-                  padding: "4px 8px"
+                  padding: "8px 14px",
+                  fontSize: "0.82rem"
                 }}
                 value={statusFilter}
                 onChange={(e) => {
@@ -137,88 +154,81 @@ export const DataTable: React.FC<DataTableProps> = ({
                 }}
               >
                 <option value="ALL">All Statuses ({series.length})</option>
-                <option value="MATCHED">Matched ({series.filter((s) => s.match_status === "MATCHED").length})</option>
+                <option value="MATCHED">Matched Intervals ({series.filter((s) => s.match_status === "MATCHED").length})</option>
                 <option value="MISSING_FORECAST">Missing Forecast ({series.filter((s) => s.match_status === "MISSING_FORECAST").length})</option>
               </select>
             </div>
           </div>
 
-          {/* Export & page size */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.72rem", color: "var(--text-secondary)" }}>
-              <span>Rows:</span>
-              <select
-                className="control-select"
-                style={{
-                  background: "var(--bg-root)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: "3px 6px"
-                }}
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-
-            <button className="action-btn-sm" onClick={onExportCsv}>
-              <Download size={12} />
-              Export CSV
-            </button>
+          {/* Page size */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+            <span>Rows per page:</span>
+            <select
+              className="cutoff-select"
+              style={{
+                background: "var(--bg-canvas)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: "6px 12px"
+              }}
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value={25}>25 rows</option>
+              <option value={50}>50 rows</option>
+              <option value={100}>100 rows</option>
+            </select>
           </div>
         </div>
 
-        {/* Ledger Table */}
-        <div style={{ overflowX: "auto" }}>
-          <table className="ledger-table">
+        {/* Table Container */}
+        <div className="data-table-container">
+          <table className="pro-table">
             <thead>
               <tr>
                 <th onClick={() => handleSort("delivery_start")} style={{ cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    Delivery Target (UK / UTC) <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    Delivery Target (UK Local / UTC) <ArrowUpDown size={12} />
                   </div>
                 </th>
                 <th onClick={() => handleSort("settlement_period")} style={{ cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    SP <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    SP <ArrowUpDown size={12} />
                   </div>
                 </th>
                 <th onClick={() => handleSort("actual_generation_mw")} style={{ cursor: "pointer", textAlign: "right" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-                    Actual Outturn (MW) <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                    Realized Outturn (MW) <ArrowUpDown size={12} />
                   </div>
                 </th>
                 <th onClick={() => handleSort("forecast_generation_mw")} style={{ cursor: "pointer", textAlign: "right" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-                    Forecast (MW) <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                    Selected Forecast (MW) <ArrowUpDown size={12} />
                   </div>
                 </th>
                 <th onClick={() => handleSort("error_mw")} style={{ cursor: "pointer", textAlign: "right" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-                    Error Delta (MW) <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                    Forecast Error (MW) <ArrowUpDown size={12} />
                   </div>
                 </th>
                 <th onClick={() => handleSort("abs_error_mw")} style={{ cursor: "pointer", textAlign: "right" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px" }}>
-                    Abs Error (MW) <ArrowUpDown size={11} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                    Abs Error (MW) <ArrowUpDown size={12} />
                   </div>
                 </th>
-                <th>Cutoff Selected Vintage</th>
-                <th>Status</th>
-                <th style={{ textAlign: "center" }}>Audit</th>
+                <th>Selected Vintage (UTC)</th>
+                <th>Match Status</th>
+                <th style={{ textAlign: "center" }}>Vintage Audit</th>
               </tr>
             </thead>
             <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "32px", color: "var(--text-muted)" }}>
-                    No intervals match search criteria.
+                  <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                    No intervals match the current search filter.
                   </td>
                 </tr>
               ) : (
@@ -229,10 +239,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                     onClick={() => onInspectInterval(row.delivery_start)}
                   >
                     <td>
-                      <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                      <div style={{ fontWeight: 700, color: "var(--text-white)" }}>
                         {row.delivery_start_uk}
                       </div>
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                         UTC: {row.delivery_start}
                       </div>
                     </td>
@@ -240,16 +250,16 @@ export const DataTable: React.FC<DataTableProps> = ({
                       <span className="font-mono">{row.settlement_period || "—"}</span>
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <span className="font-mono" style={{ color: "var(--color-actual)", fontWeight: 600 }}>
+                      <span className="font-mono" style={{ color: "var(--color-actual)", fontWeight: 700 }}>
                         {row.actual_generation_mw !== null && row.actual_generation_mw !== undefined
-                          ? row.actual_generation_mw.toLocaleString()
+                          ? `${row.actual_generation_mw.toLocaleString()} MW`
                           : "—"}
                       </span>
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <span className="font-mono" style={{ color: "var(--color-forecast)", fontWeight: 600 }}>
+                      <span className="font-mono" style={{ color: "var(--color-forecast)", fontWeight: 700 }}>
                         {row.forecast_generation_mw !== null && row.forecast_generation_mw !== undefined
-                          ? row.forecast_generation_mw.toLocaleString()
+                          ? `${row.forecast_generation_mw.toLocaleString()} MW`
                           : "—"}
                       </span>
                     </td>
@@ -259,10 +269,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                           className="font-mono"
                           style={{
                             color: row.error_mw > 0 ? "var(--color-deficit)" : "var(--color-surplus)",
-                            fontWeight: 600
+                            fontWeight: 700
                           }}
                         >
-                          {row.error_mw > 0 ? `+${row.error_mw.toLocaleString()}` : row.error_mw.toLocaleString()}
+                          {row.error_mw > 0 ? `+${row.error_mw.toLocaleString()}` : row.error_mw.toLocaleString()} MW
                         </span>
                       ) : (
                         "—"
@@ -271,31 +281,30 @@ export const DataTable: React.FC<DataTableProps> = ({
                     <td style={{ textAlign: "right" }}>
                       <span className="font-mono">
                         {row.abs_error_mw !== null && row.abs_error_mw !== undefined
-                          ? row.abs_error_mw.toLocaleString()
+                          ? `${row.abs_error_mw.toLocaleString()} MW`
                           : "—"}
                       </span>
                     </td>
-                    <td style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                    <td style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                       {row.selected_publish_time
                         ? row.selected_publish_time.replace("T", " ").replace("Z", " UTC")
-                        : "None (Hourly Gap)"}
+                        : "None (Hourly Resolution)"}
                     </td>
                     <td>
-                      <span className={`status-pill ${row.match_status === "MATCHED" ? "matched" : "missing"}`}>
+                      <span className={`badge-status ${row.match_status === "MATCHED" ? "actual" : "deficit"}`}>
                         {row.match_status}
                       </span>
                     </td>
                     <td style={{ textAlign: "center" }}>
                       <button
-                        className="action-btn-sm"
-                        style={{ padding: "2px 6px", fontSize: "0.68rem" }}
+                        className="btn-secondary"
+                        style={{ padding: "4px 8px", fontSize: "0.72rem" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           onInspectInterval(row.delivery_start);
                         }}
-                        title="Audit 24h forecast vintages before cutoff"
                       >
-                        <Eye size={11} />
+                        <Eye size={12} />
                         Audit
                       </button>
                     </td>
@@ -306,42 +315,42 @@ export const DataTable: React.FC<DataTableProps> = ({
           </table>
         </div>
 
-        {/* Pagination Footer */}
+        {/* Pagination Bar */}
         <div style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "10px 14px",
+          marginTop: "20px",
+          paddingTop: "16px",
           borderTop: "1px solid var(--border-subtle)",
-          fontSize: "0.72rem",
-          color: "var(--text-secondary)",
-          background: "var(--bg-panel)"
+          fontSize: "0.82rem",
+          color: "var(--text-secondary)"
         }}>
           <div>
-            Showing {sortedData.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, sortedData.length)} of {sortedData.length} intervals
+            Showing {sortedData.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, sortedData.length)} of {sortedData.length} settlement intervals
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
-              className="action-btn-sm"
+              className="btn-secondary"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               style={{ opacity: currentPage === 1 ? 0.4 : 1 }}
             >
-              <ChevronLeft size={13} />
-              Prev
+              <ChevronLeft size={14} />
+              Previous
             </button>
-            <span className="font-mono">
+            <span className="font-mono" style={{ padding: "0 8px" }}>
               Page {currentPage} of {totalPages}
             </span>
             <button
-              className="action-btn-sm"
+              className="btn-secondary"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               style={{ opacity: currentPage === totalPages ? 0.4 : 1 }}
             >
               Next
-              <ChevronRight size={13} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>

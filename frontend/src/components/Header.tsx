@@ -3,9 +3,10 @@ import {
   Wind,
   Download,
   Clock,
-  Layers,
+  TrendingUp,
+  BarChart2,
+  Sliders,
   Table,
-  BarChart3,
   BookOpen
 } from "lucide-react";
 import type { HealthResponse } from "../types";
@@ -15,14 +16,10 @@ interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   startDate: string;
-  setStartDate: (d: string) => void;
   endDate: string;
-  setEndDate: (d: string) => void;
   cutoffTime: string;
   setCutoffTime: (t: string) => void;
   health: HealthResponse | null;
-  onRefresh: () => void;
-  isLoading: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,60 +37,67 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="apple-header">
+    <header className="main-navbar">
       {/* Brand & Subtitle */}
-      <div className="brand-section">
-        <div className="brand-logo-mark">
-          <Wind size={16} color="#ffffff" />
+      <div className="nav-brand">
+        <div className="brand-icon-box">
+          <Wind size={18} color="#ffffff" />
         </div>
         <div>
-          <div className="brand-title">
-            WINDLENS <span className="brand-badge">PRO</span>
+          <div className="brand-name">
+            WindLens <span className="badge-tag">PRO DESK</span>
           </div>
+          <div className="brand-desc">UK Day-Ahead Wind Forecast Analytics Platform</div>
         </div>
-        <span className="brand-sub">| UK Day-Ahead Power Trading Desk</span>
       </div>
 
-      {/* Segmented Mode Switcher */}
-      <nav className="segmented-control">
+      {/* Spacious Navigation Tabs */}
+      <nav className="nav-links">
         <button
-          className={`segmented-pill ${activeTab === "cockpit" ? "active" : ""}`}
-          onClick={() => setActiveTab("cockpit")}
+          className={`nav-link-btn ${activeTab === "overview" ? "active" : ""}`}
+          onClick={() => setActiveTab("overview")}
         >
-          <Layers size={13} />
-          Executive Cockpit
+          <TrendingUp size={15} />
+          Forecast Desk
         </button>
         <button
-          className={`segmented-pill ${activeTab === "ledger" ? "active" : ""}`}
+          className={`nav-link-btn ${activeTab === "variance" ? "active" : ""}`}
+          onClick={() => setActiveTab("variance")}
+        >
+          <BarChart2 size={15} />
+          Variance Analytics
+        </button>
+        <button
+          className={`nav-link-btn ${activeTab === "procurement" ? "active" : ""}`}
+          onClick={() => setActiveTab("procurement")}
+        >
+          <Sliders size={15} />
+          Procurement Engine
+        </button>
+        <button
+          className={`nav-link-btn ${activeTab === "ledger" ? "active" : ""}`}
           onClick={() => setActiveTab("ledger")}
         >
-          <Table size={13} />
+          <Table size={15} />
           Settlement Ledger
         </button>
         <button
-          className={`segmented-pill ${activeTab === "diurnal" ? "active" : ""}`}
-          onClick={() => setActiveTab("diurnal")}
+          className={`nav-link-btn ${activeTab === "methodology" ? "active" : ""}`}
+          onClick={() => setActiveTab("methodology")}
         >
-          <BarChart3 size={13} />
-          Diurnal & Distribution
-        </button>
-        <button
-          className={`segmented-pill ${activeTab === "audit" ? "active" : ""}`}
-          onClick={() => setActiveTab("audit")}
-        >
-          <BookOpen size={13} />
+          <BookOpen size={15} />
           Methodology & Audit
         </button>
       </nav>
 
-      {/* Action & Cutoff Controls */}
-      <div className="header-actions">
+      {/* Right Controls */}
+      <div className="nav-actions">
         {/* Decision Cutoff Selector */}
-        <div className="control-pill" title="Decision cutoff: only forecasts published before this time on D-1 are eligible">
-          <Clock size={12} color="var(--color-forecast)" />
+        <div className="cutoff-badge-box" title="Elexon WINDFOR decision cutoff at D-1">
+          <Clock size={14} color="var(--color-forecast)" />
           <span>Cutoff:</span>
           <select
-            className="control-select"
+            className="cutoff-select"
             value={cutoffTime}
             onChange={(e) => setCutoffTime(e.target.value)}
           >
@@ -104,16 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
           </select>
         </div>
 
-        {/* CSV Export Button */}
-        <button className="action-btn-sm" onClick={handleCsvExport} title="Export verified interval data to CSV">
-          <Download size={12} />
+        {/* Export Button */}
+        <button className="btn-secondary" onClick={handleCsvExport} title="Download verified January 2026 dataset">
+          <Download size={14} />
           Export CSV
         </button>
 
-        {/* Elexon Stream API Live Status */}
-        <div className="status-indicator" title={health ? `Uptime: ${Math.round(health.uptime_seconds)}s | Vintages: ${health.cached_forecast_vintages_count.toLocaleString()}` : "Connecting..."}>
-          <div className="status-dot" />
-          <span>Elexon Live</span>
+        {/* Live Elexon Status */}
+        <div className="elexon-pill" title={health ? `Uptime: ${Math.round(health.uptime_seconds)}s | 18,080 forecast vintages` : "Connected"}>
+          <div className="dot-live" />
+          <span>Elexon Live Stream</span>
         </div>
       </div>
     </header>

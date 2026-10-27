@@ -56,7 +56,7 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
           justifyContent: "space-between",
           alignItems: "center",
           padding: "12px 18px",
-          background: "var(--bg-panel)",
+          background: "var(--bg-canvas)",
           borderBottom: "1px solid var(--border-subtle)"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -238,15 +238,14 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
         <div style={{
-          padding: "10px 18px",
-          background: "var(--bg-panel)",
+          padding: "12px 20px",
+          background: "var(--bg-canvas)",
           borderTop: "1px solid var(--border-subtle)",
           display: "flex",
           justifyContent: "flex-end"
         }}>
-          <button className="action-btn-sm" onClick={onClose}>
+          <button className="btn-secondary" onClick={onClose}>
             Close Audit Inspector
           </button>
         </div>

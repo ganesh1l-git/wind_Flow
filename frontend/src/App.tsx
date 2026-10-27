@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "./components/Header";
-import { MetricRibbon } from "./components/MetricRibbon";
-import { ExecutiveDashboard } from "./components/ExecutiveDashboard";
+import { ForecastDeskView } from "./components/ForecastDeskView";
+import { VarianceAnalyticsView } from "./components/VarianceAnalyticsView";
+import { ProcurementSimulatorView } from "./components/ProcurementSimulatorView";
 import { DataTable } from "./components/DataTable";
-import { ErrorAnalysisChart } from "./components/ErrorAnalysisChart";
 import { MethodologyPanel } from "./components/MethodologyPanel";
 import { VintageInspectorModal } from "./components/VintageInspectorModal";
 import type {
@@ -14,14 +14,15 @@ import type {
 import {
   fetchHealth,
   fetchAnalysis,
-  fetchIntervalVintages
+  fetchIntervalVintages,
+  getCsvExportUrl
 } from "./services/api";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("cockpit");
-  const [startDate, setStartDate] = useState<string>("2026-01-01");
-  const [endDate, setEndDate] = useState<string>("2026-01-31");
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  const startDate = "2026-01-01";
+  const endDate = "2026-01-31";
   const [cutoffTime, setCutoffTime] = useState<string>("12:00");
 
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null);
@@ -84,105 +85,113 @@ export const App: React.FC = () => {
     setVintagesData(null);
   };
 
+  const handleExportCsv = () => {
+    const url = getCsvExportUrl(startDate, endDate, cutoffTime);
+    window.open(url, "_blank");
+  };
+
   return (
-    <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* 1. Apple Pro Command Header (46px) */}
+    <div className="app-shell">
+      {/* 1. Spacious App Navigation Header */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         startDate={startDate}
-        setStartDate={setStartDate}
         endDate={endDate}
-        setEndDate={setEndDate}
         cutoffTime={cutoffTime}
         setCutoffTime={setCutoffTime}
         health={health}
-        onRefresh={loadAnalysis}
-        isLoading={isLoading}
       />
 
-      {/* 2. Precision Metric Ribbon (38px) */}
-      {analysisData && <MetricRibbon metrics={analysisData.metrics} />}
-
-      {/* 3. Main Workspace Area */}
-      <main style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* 2. Main Page Content */}
+      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {error ? (
           <div style={{
-            margin: "40px auto",
-            maxWidth: "520px",
+            margin: "60px auto",
+            maxWidth: "560px",
             background: "rgba(239, 68, 68, 0.08)",
             border: "1px solid rgba(239, 68, 68, 0.25)",
-            borderRadius: "var(--radius-md)",
-            padding: "24px",
+            borderRadius: "var(--radius-lg)",
+            padding: "32px",
             textAlign: "center"
           }}>
-            <AlertCircle size={36} color="var(--color-alert)" style={{ margin: "0 auto 12px auto" }} />
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fca5a5", marginBottom: "8px" }}>
-              Unable to Retrieve Market Analysis
+            <AlertCircle size={40} color="var(--color-alert)" style={{ margin: "0 auto 16px auto" }} />
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fca5a5", marginBottom: "8px" }}>
+              Unable to Retrieve Market Analysis Data
             </h3>
-            <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "20px" }}>
               {error}
             </p>
-            <button className="action-btn-sm" onClick={loadAnalysis} style={{ margin: "0 auto" }}>
-              <RefreshCw size={13} /> Retry Analysis
+            <button className="btn-secondary" onClick={loadAnalysis} style={{ margin: "0 auto" }}>
+              <RefreshCw size={14} /> Retry Request
             </button>
           </div>
         ) : isLoading && !analysisData ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 20px" }}>
             <div style={{
-              width: "32px",
-              height: "32px",
-              border: "2px solid rgba(255,255,255,0.08)",
+              width: "36px",
+              height: "36px",
+              border: "3px solid rgba(255,255,255,0.08)",
               borderTopColor: "var(--color-forecast)",
               borderRadius: "50%",
               animation: "spin 0.8s linear infinite"
             }} />
-            <div style={{ marginTop: "14px", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-primary)" }}>
-              Loading Elexon Day-Ahead Power Analysis...
+            <div style={{ marginTop: "18px", fontSize: "0.95rem", fontWeight: 700, color: "var(--text-primary)" }}>
+              Running Day-Ahead Wind Forecast Analytics...
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "3px" }}>
-              Enforcing {cutoffTime} UK Local Cutoff • Eliminating Look-Ahead Bias
+            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "4px" }}>
+              Applying {cutoffTime} UK Local Cutoff on Preceding Days • Eliminating Look-Ahead Bias
             </div>
           </div>
         ) : analysisData ? (
           <>
-            {activeTab === "cockpit" && (
-              <ExecutiveDashboard
+            {activeTab === "overview" && (
+              <ForecastDeskView
                 data={analysisData}
                 onInspectInterval={handleInspectInterval}
               />
+            )}
+
+            {activeTab === "variance" && (
+              <VarianceAnalyticsView data={analysisData} />
+            )}
+
+            {activeTab === "procurement" && (
+              <ProcurementSimulatorView data={analysisData} />
             )}
 
             {activeTab === "ledger" && (
               <DataTable
                 series={analysisData.series}
                 onInspectInterval={handleInspectInterval}
-                onExportCsv={() => {}}
+                onExportCsv={handleExportCsv}
               />
             )}
 
-            {activeTab === "diurnal" && (
-              <ErrorAnalysisChart
-                dailySummaries={analysisData.daily_summaries}
-                errorDistribution={analysisData.error_distribution}
-                hourlyProfiles={analysisData.hourly_profiles}
-              />
-            )}
-
-            {activeTab === "audit" && (
+            {activeTab === "methodology" && (
               <MethodologyPanel />
             )}
           </>
         ) : null}
       </main>
 
-      {/* 4. Forecast Vintage Audit Modal */}
+      {/* 3. Forecast Vintage Audit Modal */}
       <VintageInspectorModal
         isOpen={inspectedInterval !== null}
         onClose={handleCloseVintageModal}
         data={vintagesData}
         isLoading={isVintagesLoading}
       />
+
+      {/* 4. Elegant Footer */}
+      <footer className="app-footer">
+        <div>
+          <strong style={{ color: "var(--text-primary)" }}>WindLens</strong> • UK Day-Ahead Wind Forecast Analytics Platform • Developed for Energy Utilities
+        </div>
+        <div>
+          Official Datasets: Elexon BMRS <code>FUELHH</code> (WIND) & <code>WINDFOR</code> Stream APIs • Evaluation Period: January 2026
+        </div>
+      </footer>
     </div>
   );
 };
