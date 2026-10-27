@@ -9,207 +9,265 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ReferenceLine,
   Cell
 } from "recharts";
-import type { IntervalRecord, DailySummary, ErrorDistributionBin } from "../types";
-import { TrendingUp, BarChart2, Calendar } from "lucide-react";
+import type { DailySummary, ErrorDistributionBin, HourlyProfile } from "../types";
+import { BarChart3, TrendingUp, Calendar } from "lucide-react";
 
 interface ErrorAnalysisChartProps {
-  series: IntervalRecord[];
   dailySummaries: DailySummary[];
   errorDistribution: ErrorDistributionBin[];
+  hourlyProfiles?: HourlyProfile[];
 }
 
 export const ErrorAnalysisChart: React.FC<ErrorAnalysisChartProps> = ({
-  series,
   dailySummaries,
-  errorDistribution
+  errorDistribution,
+  hourlyProfiles = []
 }) => {
-  const [viewMode, setViewMode] = useState<"time_series" | "distribution" | "daily">("time_series");
-
-  // Filter matched records
-  const matchedSeries = series
-    .filter((s) => s.match_status === "MATCHED" && s.error_mw !== null && s.error_mw !== undefined)
-    .map((s) => ({
-      time: s.delivery_start.slice(5, 16).replace("T", " "),
-      ukLocal: s.delivery_start_uk,
-      error: s.error_mw,
-      absError: s.abs_error_mw,
-      actual: s.actual_generation_mw,
-      forecast: s.forecast_generation_mw
-    }));
-
-  const CustomErrorTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const isOver = data.error > 0;
-      return (
-        <div className="custom-chart-tooltip">
-          <div style={{ fontWeight: 600, color: "var(--accent-cyan)", marginBottom: "4px" }}>
-            {data.ukLocal}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px", fontSize: "0.8125rem" }}>
-            <div>
-              Forecast Error:{" "}
-              <strong style={{ color: isOver ? "var(--accent-amber)" : "var(--accent-rose)" }}>
-                {isOver ? `+${data.error.toLocaleString()}` : data.error.toLocaleString()} MW
-              </strong>
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-              {isOver ? "Overforecast: Wind fell short by " + Math.abs(data.error) + " MW" : "Underforecast: Wind exceeded by " + Math.abs(data.error) + " MW"}
-            </div>
-            <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "4px", marginTop: "2px", fontSize: "0.75rem" }}>
-              Forecast: {data.forecast?.toLocaleString()} MW | Actual: {data.actual?.toLocaleString()} MW
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  const [subView, setSubView] = useState<"diurnal" | "distribution" | "daily">("diurnal");
 
   return (
-    <div className="chart-card">
-      <div className="chart-header">
-        <div>
-          <h2 className="chart-title">
-            Quantitative Forecast Error Analysis (e = Forecast - Actual)
-          </h2>
-          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Positive error values indicate overforecasting; negative values indicate underforecasting
-          </p>
+    <div className="tab-scroll-container">
+      <div className="ledger-card">
+        {/* Header toolbar */}
+        <div className="ledger-toolbar">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-white)" }}>
+              Statistical Error & Diurnal Analysis
+            </span>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+              (Empirical Residuals: e = Forecast - Actual)
+            </span>
+          </div>
+
+          {/* Subview pills */}
+          <div className="segmented-control">
+            <button
+              className={`segmented-pill ${subView === "diurnal" ? "active" : ""}`}
+              onClick={() => setSubView("diurnal")}
+            >
+              <TrendingUp size={12} />
+              24-Hour Diurnal Profile
+            </button>
+            <button
+              className={`segmented-pill ${subView === "distribution" ? "active" : ""}`}
+              onClick={() => setSubView("distribution")}
+            >
+              <BarChart3 size={12} />
+              Error Histogram
+            </button>
+            <button
+              className={`segmented-pill ${subView === "daily" ? "active" : ""}`}
+              onClick={() => setSubView("daily")}
+            >
+              <Calendar size={12} />
+              Daily Summary Ledger
+            </button>
+          </div>
         </div>
 
-        {/* View toggle */}
-        <div style={{ display: "flex", gap: "6px" }}>
-          <button
-            className={`btn-secondary ${viewMode === "time_series" ? "active" : ""}`}
-            style={{
-              padding: "6px 12px",
-              fontSize: "0.75rem",
-              background: viewMode === "time_series" ? "rgba(6, 182, 212, 0.15)" : undefined,
-              borderColor: viewMode === "time_series" ? "var(--accent-cyan)" : undefined,
-              color: viewMode === "time_series" ? "var(--accent-cyan)" : undefined
-            }}
-            onClick={() => setViewMode("time_series")}
-          >
-            <TrendingUp size={14} />
-            Error Time-Series
-          </button>
-          <button
-            className={`btn-secondary ${viewMode === "distribution" ? "active" : ""}`}
-            style={{
-              padding: "6px 12px",
-              fontSize: "0.75rem",
-              background: viewMode === "distribution" ? "rgba(6, 182, 212, 0.15)" : undefined,
-              borderColor: viewMode === "distribution" ? "var(--accent-cyan)" : undefined,
-              color: viewMode === "distribution" ? "var(--accent-cyan)" : undefined
-            }}
-            onClick={() => setViewMode("distribution")}
-          >
-            <BarChart2 size={14} />
-            Error Distribution Histogram
-          </button>
-          <button
-            className={`btn-secondary ${viewMode === "daily" ? "active" : ""}`}
-            style={{
-              padding: "6px 12px",
-              fontSize: "0.75rem",
-              background: viewMode === "daily" ? "rgba(6, 182, 212, 0.15)" : undefined,
-              borderColor: viewMode === "daily" ? "var(--accent-cyan)" : undefined,
-              color: viewMode === "daily" ? "var(--accent-cyan)" : undefined
-            }}
-            onClick={() => setViewMode("daily")}
-          >
-            <Calendar size={14} />
-            Daily MAE & Bias Breakdown
-          </button>
-        </div>
-      </div>
+        {/* View 1: 24-Hour Diurnal Curve */}
+        {subView === "diurnal" && (
+          <div style={{ padding: "16px" }}>
+            <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                Mean Forecast Bias & MAE by Hour of Day (UK Local Time, 00:00 - 23:00)
+              </span>
+              <span style={{ fontSize: "0.72rem", color: "var(--color-deficit)" }}>
+                Note: Evening Peak (17:00-19:00) coincides with maximum system tightness
+              </span>
+            </div>
 
-      {/* View 1: Error Time Series */}
-      {viewMode === "time_series" && (
-        <div style={{ width: "100%", height: "420px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={matchedSeries} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-              <XAxis dataKey="time" stroke="#64748b" fontSize={11} interval={48} tickLine={false} />
-              <YAxis
-                stroke="#64748b"
-                fontSize={11}
-                tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
-                unit=" MW"
-              />
-              <Tooltip content={<CustomErrorTooltip />} />
-              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
-              <Bar dataKey="error" name="Forecast Error (MW)">
-                {matchedSeries.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={(entry.error || 0) > 0 ? "rgba(245, 158, 11, 0.75)" : "rgba(244, 63, 94, 0.75)"}
+            <div style={{ height: "380px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={hourlyProfiles}
+                  margin={{ top: 10, right: 16, left: 10, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    stroke="#475569"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
                   />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+                  <YAxis
+                    stroke="#475569"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    tickFormatter={(v) => `${v} MW`}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        return (
+                          <div className="apple-tooltip">
+                            <div className="apple-tooltip-title">Hour {d.label} UK</div>
+                            <div className="apple-tooltip-row">
+                              <span style={{ color: "var(--color-deficit)" }}>Mean Bias:</span>
+                              <span className="font-mono">+{Math.round(d.bias_mw).toLocaleString()} MW</span>
+                            </div>
+                            <div className="apple-tooltip-row">
+                              <span style={{ color: "var(--color-forecast)" }}>MAE:</span>
+                              <span className="font-mono">{Math.round(d.mae_mw).toLocaleString()} MW</span>
+                            </div>
+                            <div className="apple-tooltip-row">
+                              <span style={{ color: "var(--color-actual)" }}>Avg Outturn:</span>
+                              <span className="font-mono">{Math.round(d.avg_actual_mw).toLocaleString()} MW</span>
+                            </div>
+                            <div className="apple-tooltip-row">
+                              <span style={{ color: "#94a3b8" }}>Avg Forecast:</span>
+                              <span className="font-mono">{Math.round(d.avg_forecast_mw).toLocaleString()} MW</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
 
-      {/* View 2: Error Distribution Histogram */}
-      {viewMode === "distribution" && (
-        <div style={{ width: "100%", height: "420px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={errorDistribution} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-              <XAxis dataKey="label" stroke="#64748b" fontSize={10} angle={-20} textAnchor="end" height={60} />
-              <YAxis stroke="#64748b" fontSize={11} unit=" intervals" />
-              <Tooltip
-                formatter={(val: any) => [`${val} intervals`, "Frequency"]}
-                contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px" }}
-              />
-              <Bar dataKey="count" name="Frequency" fill="var(--accent-cyan)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+                  {/* Overforecast bias bar */}
+                  <Bar
+                    dataKey="bias_mw"
+                    name="Mean Bias (MW)"
+                    fill="var(--color-deficit)"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={28}
+                  />
 
-      {/* View 3: Daily MAE & Bias Breakdown */}
-      {viewMode === "daily" && (
-        <div style={{ width: "100%", height: "420px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dailySummaries} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={10} interval={2} tickLine={false} />
-              <YAxis stroke="#64748b" fontSize={11} unit=" MW" />
-              <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px" }}
-              />
-              <Legend verticalAlign="top" height={36} />
-              <ReferenceLine y={0} stroke="#94a3b8" />
-              <Bar dataKey="mae_mw" name="Daily MAE (MW)" fill="#38bdf8" radius={[4, 4, 0, 0]} />
-              <Line type="monotone" dataKey="bias_mw" name="Daily Bias (MW)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+                  {/* MAE line */}
+                  <Line
+                    type="monotone"
+                    dataKey="mae_mw"
+                    name="Mean Absolute Error (MW)"
+                    stroke="var(--color-forecast)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--color-forecast)" }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
-      {/* Legend & Explanation Footer */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-color)", paddingTop: "12px", marginTop: "12px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-        <div style={{ display: "flex", gap: "16px" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "10px", height: "10px", background: "var(--accent-amber)", borderRadius: "2px" }} />
-            Positive Error (Amber): Overforecasting (Actual &lt; Forecast)
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ width: "10px", height: "10px", background: "var(--accent-rose)", borderRadius: "2px" }} />
-            Negative Error (Rose): Underforecasting (Actual &gt; Forecast)
-          </span>
-        </div>
-        <span>
-          Reference Line at e = 0 MW (Perfect Accuracy)
-        </span>
+        {/* View 2: Error Histogram */}
+        {subView === "distribution" && (
+          <div style={{ padding: "16px" }}>
+            <div style={{ marginBottom: "12px", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+              Distribution of Forecast Residuals (e = Forecast - Actual) across 744 matched hourly intervals
+            </div>
+
+            <div style={{ height: "380px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={errorDistribution}
+                  margin={{ top: 10, right: 16, left: 10, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    stroke="#475569"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                  />
+                  <YAxis
+                    stroke="#475569"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        return (
+                          <div className="apple-tooltip">
+                            <div className="apple-tooltip-title">Bin: {d.label}</div>
+                            <div className="apple-tooltip-row">
+                              <span>Interval Count:</span>
+                              <span className="font-mono" style={{ fontWeight: 600 }}>{d.count} hours</span>
+                            </div>
+                            <div className="apple-tooltip-row">
+                              <span>Share of Month:</span>
+                              <span className="font-mono">{((d.count / 744) * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                    {errorDistribution.map((entry, index) => {
+                      const isPositive = entry.bin_start >= 0;
+                      return (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={isPositive ? "var(--color-deficit)" : "var(--color-surplus)"}
+                        />
+                      );
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* View 3: Daily Aggregations Table */}
+        {subView === "daily" && (
+          <div style={{ overflowX: "auto" }}>
+            <table className="ledger-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Matched Hours</th>
+                  <th style={{ textAlign: "right" }}>Daily MAE (MW)</th>
+                  <th style={{ textAlign: "right" }}>Daily Bias (MW)</th>
+                  <th style={{ textAlign: "right" }}>Daily WAPE</th>
+                  <th style={{ textAlign: "right" }}>Actual Wind Energy (MWh)</th>
+                  <th style={{ textAlign: "right" }}>Forecast Wind Energy (MWh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailySummaries.map((day) => {
+                  const isOver = (day.bias_mw || 0) > 0;
+                  return (
+                    <tr key={day.date}>
+                      <td style={{ fontWeight: 600, color: "var(--text-white)" }}>{day.date}</td>
+                      <td>{day.matched_intervals} / {day.total_intervals}</td>
+                      <td style={{ textAlign: "right" }} className="font-mono">
+                        {day.mae_mw?.toLocaleString() || "—"} MW
+                      </td>
+                      <td style={{ textAlign: "right" }} className="font-mono">
+                        <span style={{ color: isOver ? "var(--color-deficit)" : "var(--color-surplus)", fontWeight: 600 }}>
+                          {(day.bias_mw || 0) > 0 ? `+${day.bias_mw?.toLocaleString()}` : day.bias_mw?.toLocaleString()} MW
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }} className="font-mono">
+                        {day.wape_pct || "—"}%
+                      </td>
+                      <td className="font-mono" style={{ textAlign: "right", color: "var(--color-actual)" }}>
+                        {Math.round(day.actual_energy_mwh).toLocaleString()} MWh
+                      </td>
+                      <td className="font-mono" style={{ textAlign: "right", color: "var(--color-forecast)" }}>
+                        {Math.round(day.forecast_energy_mwh).toLocaleString()} MWh
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -79,11 +79,22 @@ export interface AnalysisMetadata {
   data_source_mode: string;
 }
 
+export interface HourlyProfile {
+  hour: number;
+  label: string;
+  avg_actual_mw: number;
+  avg_forecast_mw: number;
+  mae_mw: number;
+  bias_mw: number;
+  count: number;
+}
+
 export interface AnalysisResponse {
   metadata: AnalysisMetadata;
   metrics: AccuracyMetrics;
   daily_summaries: DailySummary[];
   error_distribution: ErrorDistributionBin[];
+  hourly_profiles?: HourlyProfile[];
   series: IntervalRecord[];
 }
 

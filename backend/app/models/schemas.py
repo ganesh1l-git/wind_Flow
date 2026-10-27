@@ -87,11 +87,22 @@ class AnalysisMetadata(BaseModel):
     data_source_mode: str  # "LIVE_CACHE" or "ELEXON_API"
 
 
+class HourlyProfile(BaseModel):
+    hour: int
+    label: str
+    avg_actual_mw: float
+    avg_forecast_mw: float
+    mae_mw: float
+    bias_mw: float
+    count: int
+
+
 class AnalysisResponse(BaseModel):
     metadata: AnalysisMetadata
     metrics: AccuracyMetrics
     daily_summaries: List[DailySummary]
     error_distribution: List[ErrorDistributionBin]
+    hourly_profiles: List[HourlyProfile] = []
     series: List[IntervalRecord]
 
 

@@ -12,16 +12,17 @@ from app.models.schemas import (
     IntervalRecord,
     AccuracyMetrics,
     DailySummary,
-    ErrorDistributionBin
+    ErrorDistributionBin,
+    HourlyProfile
 )
 
 
 def calculate_metrics(
     intervals: List[IntervalRecord],
     total_calendar_intervals: int = 1488
-) -> Tuple[AccuracyMetrics, List[DailySummary], List[ErrorDistributionBin]]:
+) -> Tuple[AccuracyMetrics, List[DailySummary], List[ErrorDistributionBin], List[HourlyProfile]]:
     """
-    Compute paired accuracy metrics, daily summaries, and error distribution.
+    Compute paired accuracy metrics, daily summaries, error distribution, and diurnal hourly profile.
     Only intervals with match_status == 'MATCHED' (both valid actual and eligible forecast)
     are included in paired accuracy calculations.
     """
@@ -40,7 +41,7 @@ def calculate_metrics(
             matched_intervals_count=0,
             forecast_coverage_pct=0.0
         )
-        return empty_metrics, [], []
+        return empty_metrics, [], [], []
 
     errors = [r.error_mw for r in matched_records if r.error_mw is not None]
     abs_errors = [r.abs_error_mw for r in matched_records if r.abs_error_mw is not None]
@@ -169,4 +170,44 @@ def calculate_metrics(
                     count=c
                 ))
 
-    return metrics, daily_summaries, error_bins
+    # Diurnal / Hourly Profile (0..23)
+    hourly_data = defaultdict(list)
+    for r in matched_records:
+        try:
+            hour = int(r.delivery_start[11:13])
+            hourly_data[hour].append(r)
+        except Exception:
+            pass
+
+    hourly_profiles: List[HourlyProfile] = []
+    for h in range(24):
+        h_recs = hourly_data.get(h, [])
+        if h_recs:
+            h_errs = [r.error_mw for r in h_recs if r.error_mw is not None]
+            h_abs = [r.abs_error_mw for r in h_recs if r.abs_error_mw is not None]
+            h_acts = [r.actual_generation_mw for r in h_recs if r.actual_generation_mw is not None]
+            h_fcs = [r.forecast_generation_mw for r in h_recs if r.forecast_generation_mw is not None]
+            
+            c = len(h_recs)
+            mae_val = round(sum(h_abs) / c, 2)
+            bias_val = round(sum(h_errs) / c, 2)
+            act_avg = round(sum(h_acts) / c, 2)
+            fc_avg = round(sum(h_fcs) / c, 2)
+        else:
+            c = 0
+            mae_val = 0.0
+            bias_val = 0.0
+            act_avg = 0.0
+            fc_avg = 0.0
+            
+        hourly_profiles.append(HourlyProfile(
+            hour=h,
+            label=f"{h:02d}:00",
+            avg_actual_mw=act_avg,
+            avg_forecast_mw=fc_avg,
+            mae_mw=mae_val,
+            bias_mw=bias_val,
+            count=c
+        ))
+
+    return metrics, daily_summaries, error_bins, hourly_profiles

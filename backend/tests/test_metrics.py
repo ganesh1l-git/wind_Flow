@@ -48,7 +48,7 @@ def test_standard_paired_accuracy_metrics():
     # Actuals sum: 1000 + 2000 + 1500 + 1500 = 6000
     # WAPE: 800 / 6000 * 100 = 13.33%
 
-    metrics, daily, bins = calculate_metrics(intervals, total_calendar_intervals=4)
+    metrics, daily, bins, hourly = calculate_metrics(intervals, total_calendar_intervals=4)
     assert metrics.matched_intervals_count == 4
     assert metrics.mae_mw == 200.0
     assert metrics.rmse_mw == round(math.sqrt(45000), 2)
@@ -57,6 +57,7 @@ def test_standard_paired_accuracy_metrics():
     assert metrics.overforecast_count == 2
     assert metrics.underforecast_count == 2
     assert metrics.max_abs_error_mw == 300.0
+    assert len(hourly) == 24
 
 
 def test_positive_bias_interpretation():
@@ -65,7 +66,7 @@ def test_positive_bias_interpretation():
         make_interval("2026-01-05T00:00:00Z", actual_mw=500.0, forecast_mw=600.0),
         make_interval("2026-01-05T00:30:00Z", actual_mw=500.0, forecast_mw=700.0),
     ]
-    metrics, _, _ = calculate_metrics(intervals, total_calendar_intervals=2)
+    metrics, _, _, _ = calculate_metrics(intervals, total_calendar_intervals=2)
     assert metrics.bias_mw == 150.0  # Positive bias = overforecasting on average
 
 
@@ -75,7 +76,7 @@ def test_zero_actual_generation_wape_handled_safely():
         make_interval("2026-01-08T00:00:00Z", actual_mw=0.0, forecast_mw=100.0),
         make_interval("2026-01-08T00:30:00Z", actual_mw=0.0, forecast_mw=50.0),
     ]
-    metrics, _, _ = calculate_metrics(intervals, total_calendar_intervals=2)
+    metrics, _, _, _ = calculate_metrics(intervals, total_calendar_intervals=2)
     assert metrics.wape_pct is None  # Safe handling of 0 denominator
     assert metrics.mae_mw == 75.0
     assert metrics.matched_intervals_count == 2
@@ -88,7 +89,7 @@ def test_unmatched_intervals_excluded_from_paired_metrics():
         make_interval("2026-01-10T00:30:00Z", actual_mw=1000.0, forecast_mw=None, match_status="MISSING_FORECAST"),
         make_interval("2026-01-10T01:00:00Z", actual_mw=None, forecast_mw=1200.0, match_status="MISSING_ACTUAL"),
     ]
-    metrics, _, _ = calculate_metrics(intervals, total_calendar_intervals=3)
+    metrics, _, _, _ = calculate_metrics(intervals, total_calendar_intervals=3)
     assert metrics.matched_intervals_count == 1
     assert metrics.intervals_with_actual == 2
     assert metrics.intervals_with_eligible_forecast == 2
@@ -98,7 +99,7 @@ def test_unmatched_intervals_excluded_from_paired_metrics():
 
 def test_empty_intervals_handling():
     """Empty list returns zero matched count and None metrics without crashing."""
-    metrics, daily, bins = calculate_metrics([], total_calendar_intervals=1488)
+    metrics, daily, bins, hourly = calculate_metrics([], total_calendar_intervals=1488)
     assert metrics.matched_intervals_count == 0
     assert metrics.mae_mw is None
     assert metrics.rmse_mw is None
@@ -106,3 +107,4 @@ def test_empty_intervals_handling():
     assert metrics.wape_pct is None
     assert len(daily) == 0
     assert len(bins) == 0
+    assert len(hourly) == 0

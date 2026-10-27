@@ -163,7 +163,7 @@ async def get_analysis(
     except Exception:
         expected_intervals = 1488
 
-    metrics, daily_summaries, error_distribution = calculate_metrics(
+    metrics, daily_summaries, error_distribution, hourly_profiles = calculate_metrics(
         intervals=records,
         total_calendar_intervals=expected_intervals
     )
@@ -186,6 +186,7 @@ async def get_analysis(
         metrics=metrics,
         daily_summaries=daily_summaries,
         error_distribution=error_distribution,
+        hourly_profiles=hourly_profiles,
         series=records
     )
 
