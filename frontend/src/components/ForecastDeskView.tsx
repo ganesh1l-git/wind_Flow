@@ -19,7 +19,8 @@ import {
   Search,
   AlertTriangle,
   CheckCircle2,
-  Sliders
+  Sliders,
+  ExternalLink
 } from "lucide-react";
 import type { AnalysisResponse, IntervalRecord } from "../types";
 
@@ -35,7 +36,7 @@ export const ForecastDeskView: React.FC<ForecastDeskViewProps> = ({
   const { series, metrics } = data;
 
   const [selectedRange, setSelectedRange] = useState<string>("all");
-  const [showUncertaintyBand, setShowUncertaintyBand] = useState<boolean>(true);
+  const [showUncertaintyBand, setShowUncertaintyBand] = useState<boolean>(false);
   const [applyBiasHaircut, setApplyBiasHaircut] = useState<boolean>(false);
 
   // Filter matched records
@@ -273,6 +274,50 @@ export const ForecastDeskView: React.FC<ForecastDeskViewProps> = ({
           </div>
         </div>
 
+        {/* Real Elexon Data Notice & Synoptic Weather Explanation */}
+        <div style={{
+          background: "#f0f7ff",
+          border: "1px solid var(--border-medium)",
+          borderRadius: "var(--radius-sm)",
+          padding: "10px 16px",
+          marginBottom: "16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px"
+        }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.45, flex: 1, minWidth: "300px" }}>
+            <span style={{ fontWeight: 700, color: "var(--color-forecast)" }}>● Real Elexon Open Data:</span>
+            {" "}Green line is actual generation from <code>FUELHH (WIND)</code>; Blue line is the official <code>WINDFOR</code> forecast published by <strong>National Grid ESO</strong>.
+            The "peaks and valleys" are real Atlantic weather front cycles (~22 GW storm winds vs ~2 GW calm doldrums).
+            Click <strong>Week 1–5</strong> above to zoom into the smooth hourly day-by-day curves.
+          </div>
+          <a
+            href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH/stream?settlementDateFrom=2026-01-01&settlementDateTo=2026-01-02"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: "0.74rem",
+              fontWeight: 600,
+              color: "var(--color-forecast)",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              background: "#ffffff",
+              border: "1px solid var(--border-medium)",
+              padding: "6px 12px",
+              borderRadius: "var(--radius-sm)",
+              whiteSpace: "nowrap",
+              boxShadow: "var(--shadow-sm)"
+            }}
+          >
+            <ExternalLink size={12} />
+            Verify Live Elexon API JSON
+          </a>
+        </div>
+
         {/* Recharts Canvas */}
         <div className="chart-wrapper" style={{ height: "460px" }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -297,14 +342,14 @@ export const ForecastDeskView: React.FC<ForecastDeskViewProps> = ({
                 </linearGradient>
               </defs>
 
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
 
               <XAxis
                 dataKey="time"
                 stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                axisLine={{ stroke: "#cbd5e1" }}
                 minTickGap={45}
               />
 
@@ -312,7 +357,7 @@ export const ForecastDeskView: React.FC<ForecastDeskViewProps> = ({
                 stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                axisLine={{ stroke: "#cbd5e1" }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k MW`}
                 width={70}
                 domain={[0, 'auto']}
@@ -471,10 +516,10 @@ export const ForecastDeskView: React.FC<ForecastDeskViewProps> = ({
             <button
               className="btn-secondary"
               onClick={() => activeInterval && onInspectInterval(activeInterval.delivery_start)}
-              title="Audit historical forecast runs for this delivery interval"
+              title="Inspect historical forecast runs for this delivery interval"
             >
               <Search size={14} />
-              Audit Vintages
+              Inspect Vintages
             </button>
           </div>
         </div>

@@ -89,7 +89,7 @@ export const DataTable: React.FC<DataTableProps> = ({
         <div>
           <h1 className="page-title">Settlement Period Interval Ledger</h1>
           <p className="page-subtitle">
-            Complete audit trail of all 1,488 half-hourly settlement intervals across January 2026 with exact timestamp pairing
+            Complete record of all 1,488 half-hourly settlement intervals across January 2026 with exact timestamp pairing
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -221,7 +221,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 </th>
                 <th>Selected Vintage (UTC)</th>
                 <th>Match Status</th>
-                <th style={{ textAlign: "center" }}>Vintage Audit</th>
+                <th style={{ textAlign: "center" }}>Inspect Vintages</th>
               </tr>
             </thead>
             <tbody>
@@ -305,7 +305,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                         }}
                       >
                         <Eye size={12} />
-                        Audit
+                        Inspect
                       </button>
                     </td>
                   </tr>

@@ -2,6 +2,7 @@ import type {
   AnalysisResponse,
   IntervalVintagesResponse,
   ProcurementScenarioResponse,
+  ProcurementOverviewResponse,
   HealthResponse,
   ConfigResponse
 } from "../types";
@@ -52,22 +53,49 @@ export async function fetchIntervalVintages(
 }
 
 export async function simulateProcurement(
-  illustrativeDemandMw: number,
+  options: {
+    illustrativeDemandMw?: number;
+    portfolioSharePct?: number;
+    cutoffTime?: string;
+    deliveryStart?: string;
+    customCashoutPriceGbp?: number;
+  } | number,
   cutoffTime: string = "12:00",
   deliveryStart?: string
 ): Promise<ProcurementScenarioResponse> {
+  const body = typeof options === "number"
+    ? {
+        illustrative_demand_mw: options,
+        decision_cutoff_time: cutoffTime,
+        delivery_start: deliveryStart
+      }
+    : {
+        illustrative_demand_mw: options.illustrativeDemandMw,
+        portfolio_share_pct: options.portfolioSharePct ?? 100,
+        decision_cutoff_time: options.cutoffTime ?? "12:00",
+        delivery_start: options.deliveryStart,
+        custom_cashout_price_gbp: options.customCashoutPriceGbp
+      };
+
   const res = await fetch(`${API_BASE}/api/procurement-scenario`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      illustrative_demand_mw: illustrativeDemandMw,
-      decision_cutoff_time: cutoffTime,
-      delivery_start: deliveryStart
-    })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(errorBody.detail || `Scenario simulation failed: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchProcurementOverview(
+  cutoffTime: string = "12:00"
+): Promise<ProcurementOverviewResponse> {
+  const res = await fetch(`${API_BASE}/api/procurement-overview?cutoff_time=${cutoffTime}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(errorBody.detail || `Procurement overview request failed: HTTP ${res.status}`);
   }
   return res.json();
 }

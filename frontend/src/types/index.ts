@@ -21,6 +21,12 @@ export interface IntervalRecord {
   has_actual: boolean;
   has_forecast: boolean;
   match_status: "MATCHED" | "MISSING_FORECAST" | "MISSING_ACTUAL" | "EXCLUDED" | string;
+  demand_mw?: number | null;
+  system_buy_price_gbp?: number | null;
+  system_sell_price_gbp?: number | null;
+  net_imbalance_volume_mwh?: number | null;
+  day_ahead_procured_mw?: number | null;
+  imbalance_cost_gbp?: number | null;
 }
 
 export interface AccuracyMetrics {
@@ -122,6 +128,64 @@ export interface ProcurementScenarioResponse {
   procurement_range_lower_mw: number;
   procurement_range_upper_mw: number;
   disclaimer: string;
+  delivery_start_uk?: string | null;
+  settlement_period?: number | null;
+  elexon_demand_mw?: number | null;
+  portfolio_share_pct?: number;
+  system_buy_price_gbp?: number | null;
+  system_sell_price_gbp?: number | null;
+  imbalance_mw?: number | null;
+  imbalance_cost_gbp?: number | null;
+  is_shortfall?: boolean;
+  data_source?: string;
+}
+
+export interface DailyProcurementSummary {
+  date: string;
+  demand_mwh: number;
+  day_ahead_procured_mwh: number;
+  actual_wind_mwh: number;
+  forecast_wind_mwh: number;
+  imbalance_mwh: number;
+  cashout_cost_gbp: number;
+  avg_system_buy_price: number;
+  shortfall_intervals: number;
+}
+
+export interface ProcurementOverviewResponse {
+  total_demand_mwh: number;
+  total_day_ahead_procured_mwh: number;
+  total_actual_procured_mwh: number;
+  total_net_wind_imbalance_mwh: number;
+  total_cashout_cost_gbp: number;
+  avg_system_buy_price_gbp: number;
+  max_system_buy_price_gbp: number;
+  shortfall_intervals_count: number;
+  surplus_intervals_count: number;
+  worst_shortfall_interval?: {
+    delivery_start: string;
+    delivery_start_uk: string;
+    settlement_period: number;
+    demand_mw: number;
+    forecast_mw: number;
+    actual_mw: number;
+    error_mw: number;
+    system_buy_price_gbp: number;
+    cashout_cost_gbp: number;
+  } | null;
+  highest_price_interval?: {
+    delivery_start: string;
+    delivery_start_uk: string;
+    settlement_period: number;
+    demand_mw: number;
+    forecast_mw: number;
+    actual_mw: number;
+    error_mw: number;
+    system_buy_price_gbp: number;
+    cashout_cost_gbp: number;
+  } | null;
+  data_source: string;
+  daily_summaries: DailyProcurementSummary[];
 }
 
 export interface HealthResponse {

@@ -6,8 +6,7 @@ import {
   TrendingUp,
   BarChart2,
   Sliders,
-  Table,
-  BookOpen
+  Table
 } from "lucide-react";
 import type { HealthResponse } from "../types";
 import { getCsvExportUrl } from "../services/api";
@@ -80,13 +79,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Table size={15} />
           Settlement Ledger
-        </button>
-        <button
-          className={`nav-link-btn ${activeTab === "methodology" ? "active" : ""}`}
-          onClick={() => setActiveTab("methodology")}
-        >
-          <BookOpen size={15} />
-          Methodology & Audit
         </button>
       </nav>
 

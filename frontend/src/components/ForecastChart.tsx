@@ -159,7 +159,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
               }
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
             <XAxis
               dataKey="time"
               stroke="#64748b"
@@ -215,7 +215,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
       {/* Explanatory footer note */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-color)", paddingTop: "12px", marginTop: "12px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
         <span>
-          💡 <strong>Tip:</strong> Click any interval on the chart to inspect its full historical forecast vintages in the Vintage Auditor.
+          💡 <strong>Tip:</strong> Click any interval on the chart to inspect its full historical forecast vintages in the Vintage Inspector.
         </span>
         <span>
           Displaying {chartData.length} intervals • Solid line: Actuals (FUELHH) • Dashed line: Forecast (WINDFOR)

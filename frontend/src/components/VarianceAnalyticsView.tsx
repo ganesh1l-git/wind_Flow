@@ -84,24 +84,24 @@ export const VarianceAnalyticsView: React.FC<VarianceAnalyticsViewProps> = ({ da
               data={errorSeriesData}
               margin={{ top: 12, right: 20, left: 10, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
               <XAxis
                 dataKey="time"
                 stroke="#64748b"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                axisLine={{ stroke: "#cbd5e1" }}
                 minTickGap={45}
               />
               <YAxis
                 stroke="#64748b"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                axisLine={{ stroke: "#cbd5e1" }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k MW`}
                 width={65}
               />
-              <ReferenceLine y={0} stroke="rgba(255, 255, 255, 0.25)" strokeWidth={1.5} />
+              <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
@@ -165,19 +165,19 @@ export const VarianceAnalyticsView: React.FC<VarianceAnalyticsViewProps> = ({ da
                 data={hourly_profiles}
                 margin={{ top: 12, right: 16, left: 10, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
                 <XAxis
                   dataKey="label"
                   stroke="#64748b"
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                 />
                 <YAxis
                   stroke="#64748b"
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   tickFormatter={(v) => `${v} MW`}
                   width={65}
                 />
@@ -248,13 +248,13 @@ export const VarianceAnalyticsView: React.FC<VarianceAnalyticsViewProps> = ({ da
                 data={error_distribution}
                 margin={{ top: 12, right: 16, left: 10, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
                 <XAxis
                   dataKey="label"
                   stroke="#64748b"
                   fontSize={10}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   angle={-20}
                   textAnchor="end"
                 />
@@ -262,7 +262,7 @@ export const VarianceAnalyticsView: React.FC<VarianceAnalyticsViewProps> = ({ da
                   stroke="#64748b"
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.1)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   width={50}
                 />
                 <Tooltip

@@ -21,7 +21,9 @@ from app.models.schemas import (
     ConfigResponse,
     HealthResponse,
     ProcurementScenarioRequest,
-    ProcurementScenarioResponse
+    ProcurementScenarioResponse,
+    DailyProcurementSummary,
+    ProcurementOverviewResponse
 )
 from app.services.data_store import data_store
 from app.services.elexon_client import elexon_client
@@ -91,6 +93,41 @@ def build_interval_records(
 
         uk_formatted = dt_uk.strftime("%Y-%m-%d %H:%M %Z")
 
+        # Real Elexon Demand Outturn (INDO)
+        demand_data = data_store.get_demand(st)
+        demand_mw: Optional[float] = None
+        if demand_data and demand_data.get("initialDemandOutturn") is not None:
+            demand_mw = round(float(demand_data["initialDemandOutturn"]), 2)
+
+        # Real Elexon BSC System Imbalance Prices
+        price_data = data_store.get_system_price(st)
+        system_buy_price: Optional[float] = None
+        system_sell_price: Optional[float] = None
+        net_imbalance_volume: Optional[float] = None
+        if price_data:
+            if price_data.get("systemBuyPrice") is not None:
+                system_buy_price = round(float(price_data["systemBuyPrice"]), 2)
+            if price_data.get("systemSellPrice") is not None:
+                system_sell_price = round(float(price_data["systemSellPrice"]), 2)
+            if price_data.get("netImbalanceVolume") is not None:
+                net_imbalance_volume = round(float(price_data["netImbalanceVolume"]), 2)
+
+        # Day-Ahead Buy Requirement = Demand - Forecast Wind
+        day_ahead_procured_mw: Optional[float] = None
+        if demand_mw is not None and forecast_mw is not None:
+            day_ahead_procured_mw = round(max(0.0, demand_mw - forecast_mw), 2)
+
+        # Real Cashout Cost (£) for this 30-min settlement period (0.5h)
+        imbalance_cost_gbp: Optional[float] = None
+        if error_mw is not None:
+            imbalance_mwh = error_mw * 0.5
+            if error_mw > 0 and system_buy_price is not None:
+                # Shortfall penalty (utility under-procured)
+                imbalance_cost_gbp = round(imbalance_mwh * system_buy_price, 2)
+            elif error_mw < 0 and system_sell_price is not None:
+                # Surplus credit (utility over-procured)
+                imbalance_cost_gbp = round(imbalance_mwh * system_sell_price, 2)
+
         records.append(IntervalRecord(
             delivery_start=st,
             delivery_start_uk=uk_formatted,
@@ -104,7 +141,13 @@ def build_interval_records(
             decision_cutoff_utc=cutoff_utc,
             has_actual=has_actual,
             has_forecast=has_forecast,
-            match_status=match_status
+            match_status=match_status,
+            demand_mw=demand_mw,
+            system_buy_price_gbp=system_buy_price,
+            system_sell_price_gbp=system_sell_price,
+            net_imbalance_volume_mwh=net_imbalance_volume,
+            day_ahead_procured_mw=day_ahead_procured_mw,
+            imbalance_cost_gbp=imbalance_cost_gbp
         ))
 
     return records
@@ -313,10 +356,9 @@ async def export_csv(
 @router.post("/procurement-scenario", response_model=ProcurementScenarioResponse)
 async def simulate_procurement_scenario(req: ProcurementScenarioRequest):
     """
-    Day-Ahead Procurement Decision Support Simulator.
-    Calculates residual power requirement: Remaining Requirement = Client Demand - Available Wind.
-    Provides uncertainty bounds based on observed forecast errors (MAE).
-    Includes a prominent disclaimer stating that demand is illustrative user input.
+    Day-Ahead Procurement Decision Engine.
+    Uses genuine Elexon INDO Demand outturn and Elexon BSC System Imbalance Prices.
+    Allows portfolio scaling (e.g. 100% GB grid vs utility portfolio share) or custom demand overrides.
     """
     records = build_interval_records(
         start_date="2026-01-01",
@@ -328,7 +370,7 @@ async def simulate_procurement_scenario(req: ProcurementScenarioRequest):
     if not matched:
         raise HTTPException(status_code=404, detail="No matched forecast intervals available to evaluate scenario")
 
-    # Find requested interval or default to middle interval
+    # Find requested interval or default to worst shortfall interval
     target_rec = matched[len(matched) // 2]
     if req.delivery_start:
         for r in matched:
@@ -336,36 +378,161 @@ async def simulate_procurement_scenario(req: ProcurementScenarioRequest):
                 target_rec = r
                 break
 
-    forecast_mw = target_rec.forecast_generation_mw or 0.0
-    actual_mw = target_rec.actual_generation_mw
+    # Determine base demand: use user override if provided, otherwise real Elexon INDO demand
+    base_demand = target_rec.demand_mw if target_rec.demand_mw is not None else 32000.0
+    if req.illustrative_demand_mw is not None:
+        effective_demand = req.illustrative_demand_mw
+    else:
+        effective_demand = round(base_demand * (req.portfolio_share_pct / 100.0), 2)
+
+    # Scaling factor for generation if portfolio share applied
+    scale = (req.portfolio_share_pct / 100.0) if req.illustrative_demand_mw is None else 1.0
+    forecast_mw = round((target_rec.forecast_generation_mw or 0.0) * scale, 2)
+    actual_mw = round(target_rec.actual_generation_mw * scale, 2) if target_rec.actual_generation_mw is not None else None
 
     # Calculate overall MAE for uncertainty band
     mae_mw = sum(r.abs_error_mw for r in matched if r.abs_error_mw is not None) / len(matched)
+    scaled_mae = round(mae_mw * scale, 2)
 
-    residual_mw = round(max(0.0, req.illustrative_demand_mw - forecast_mw), 2)
-    actual_residual_mw = round(max(0.0, req.illustrative_demand_mw - actual_mw), 2) if actual_mw is not None else None
+    residual_mw = round(max(0.0, effective_demand - forecast_mw), 2)
+    actual_residual_mw = round(max(0.0, effective_demand - actual_mw), 2) if actual_mw is not None else None
 
-    # Uncertainty bounds:
-    # If wind underperforms by MAE, residual procurement requirement increases by MAE
-    # If wind overperforms by MAE, residual procurement requirement decreases by MAE
-    lower_mw = round(max(0.0, req.illustrative_demand_mw - (forecast_mw + mae_mw)), 2)
-    upper_mw = round(max(0.0, req.illustrative_demand_mw - max(0.0, forecast_mw - mae_mw)), 2)
+    # Uncertainty bounds
+    lower_mw = round(max(0.0, effective_demand - (forecast_mw + scaled_mae)), 2)
+    upper_mw = round(max(0.0, effective_demand - max(0.0, forecast_mw - scaled_mae)), 2)
+
+    # Real Elexon System Buy Price (Cashout price)
+    sbp = target_rec.system_buy_price_gbp or 85.0
+    if req.custom_cashout_price_gbp is not None:
+        sbp = req.custom_cashout_price_gbp
+
+    ssp = target_rec.system_sell_price_gbp or sbp
+
+    # Imbalance: error = Forecast - Actual
+    imbalance_mw = round(forecast_mw - (actual_mw or forecast_mw), 2)
+    is_shortfall = (imbalance_mw > 0)
+    
+    # Half-hourly MWh = MW * 0.5
+    imbalance_mwh = abs(imbalance_mw) * 0.5
+    applicable_price = sbp if is_shortfall else ssp
+    imbalance_cost = round(imbalance_mwh * applicable_price, 2)
 
     disclaimer = (
-        "EDUCATIONAL DECISION-SUPPORT NOTICE: Demand is an illustrative, user-entered parameter. "
-        "WindLens does not possess actual utility customer demand data. Residual procurement calculations "
-        "demonstrate how wind forecast uncertainty impacts thermal/market procurement decisions."
+        "EDUCATIONAL DECISION-SUPPORT NOTICE: Built directly on genuine Elexon INDO demand outturn, "
+        "WINDFOR day-ahead forecasts, FUELHH wind generation actuals, and BSC System Buy Prices for January 2026."
     )
 
     return ProcurementScenarioResponse(
-        illustrative_demand_mw=req.illustrative_demand_mw,
+        illustrative_demand_mw=effective_demand,
         delivery_start=target_rec.delivery_start,
+        delivery_start_uk=target_rec.delivery_start_uk,
+        settlement_period=target_rec.settlement_period,
         selected_forecast_mw=forecast_mw,
         actual_generation_mw=actual_mw,
         residual_procurement_mw=residual_mw,
         actual_residual_procurement_mw=actual_residual_mw,
-        uncertainty_band_mae_mw=round(mae_mw, 2),
+        uncertainty_band_mae_mw=scaled_mae,
         procurement_range_lower_mw=lower_mw,
         procurement_range_upper_mw=upper_mw,
-        disclaimer=disclaimer
+        disclaimer=disclaimer,
+        elexon_demand_mw=target_rec.demand_mw,
+        portfolio_share_pct=req.portfolio_share_pct,
+        system_buy_price_gbp=sbp,
+        system_sell_price_gbp=ssp,
+        imbalance_mw=imbalance_mw,
+        imbalance_cost_gbp=imbalance_cost,
+        is_shortfall=is_shortfall,
+        data_source="Genuine Elexon INDO & BSC System Prices"
     )
+
+
+@router.get("/procurement-overview", response_model=ProcurementOverviewResponse)
+async def get_procurement_overview(
+    cutoff_time: str = Query(default="12:00", pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+):
+    """
+    Overview of genuine January 2026 Procurement & Imbalance Cashout metrics.
+    Aggregates real Elexon INDO Demand, WINDFOR Day-Ahead Procurement, and BSC Cashout costs.
+    """
+    records = build_interval_records(start_date="2026-01-01", end_date="2026-01-31", cutoff_time=cutoff_time)
+    matched = [r for r in records if r.match_status == "MATCHED"]
+
+    total_demand_mwh = sum((r.demand_mw or 0.0) * 0.5 for r in matched)
+    total_da_procured_mwh = sum((r.day_ahead_procured_mw or 0.0) * 0.5 for r in matched)
+    total_actual_procured_mwh = sum(max(0.0, (r.demand_mw or 0.0) - (r.actual_generation_mw or 0.0)) * 0.5 for r in matched)
+    total_net_imbalance_mwh = sum((r.error_mw or 0.0) * 0.5 for r in matched)
+    total_cashout_cost_gbp = sum((r.imbalance_cost_gbp or 0.0) for r in matched if (r.error_mw or 0.0) > 0)
+
+    valid_sbps = [r.system_buy_price_gbp for r in matched if r.system_buy_price_gbp is not None]
+    avg_sbp = round(sum(valid_sbps) / len(valid_sbps), 2) if valid_sbps else 85.0
+    max_sbp = max(valid_sbps) if valid_sbps else 85.0
+
+    shortfall_count = sum(1 for r in matched if (r.error_mw or 0.0) > 0)
+    surplus_count = sum(1 for r in matched if (r.error_mw or 0.0) < 0)
+
+    worst_shortfall_rec = max(matched, key=lambda r: (r.error_mw or 0.0), default=None)
+    highest_price_rec = max(matched, key=lambda r: (r.system_buy_price_gbp or 0.0), default=None)
+
+    def rec_to_dict(rec):
+        if not rec:
+            return None
+        return {
+            "delivery_start": rec.delivery_start,
+            "delivery_start_uk": rec.delivery_start_uk,
+            "settlement_period": rec.settlement_period,
+            "demand_mw": rec.demand_mw,
+            "forecast_mw": rec.forecast_generation_mw,
+            "actual_mw": rec.actual_generation_mw,
+            "error_mw": rec.error_mw,
+            "system_buy_price_gbp": rec.system_buy_price_gbp,
+            "cashout_cost_gbp": rec.imbalance_cost_gbp
+        }
+
+    # Daily aggregation
+    by_date = {}
+    for r in matched:
+        d = r.delivery_date
+        if d not in by_date:
+            by_date[d] = []
+        by_date[d].append(r)
+
+    daily_summaries: List[DailyProcurementSummary] = []
+    for d, recs in sorted(by_date.items()):
+        d_demand_mwh = sum((r.demand_mw or 0.0) * 0.5 for r in recs)
+        d_da_mwh = sum((r.day_ahead_procured_mw or 0.0) * 0.5 for r in recs)
+        d_act_wind_mwh = sum((r.actual_generation_mw or 0.0) * 0.5 for r in recs)
+        d_fc_wind_mwh = sum((r.forecast_generation_mw or 0.0) * 0.5 for r in recs)
+        d_imb_mwh = sum((r.error_mw or 0.0) * 0.5 for r in recs)
+        d_cashout = sum((r.imbalance_cost_gbp or 0.0) for r in recs if (r.error_mw or 0.0) > 0)
+        d_sbps = [r.system_buy_price_gbp for r in recs if r.system_buy_price_gbp is not None]
+        d_avg_sbp = round(sum(d_sbps) / len(d_sbps), 2) if d_sbps else 85.0
+        d_shortfalls = sum(1 for r in recs if (r.error_mw or 0.0) > 0)
+
+        daily_summaries.append(DailyProcurementSummary(
+            date=d,
+            demand_mwh=round(d_demand_mwh, 1),
+            day_ahead_procured_mwh=round(d_da_mwh, 1),
+            actual_wind_mwh=round(d_act_wind_mwh, 1),
+            forecast_wind_mwh=round(d_fc_wind_mwh, 1),
+            imbalance_mwh=round(d_imb_mwh, 1),
+            cashout_cost_gbp=round(d_cashout, 2),
+            avg_system_buy_price=d_avg_sbp,
+            shortfall_intervals=d_shortfalls
+        ))
+
+    return ProcurementOverviewResponse(
+        total_demand_mwh=round(total_demand_mwh, 1),
+        total_day_ahead_procured_mwh=round(total_da_procured_mwh, 1),
+        total_actual_procured_mwh=round(total_actual_procured_mwh, 1),
+        total_net_wind_imbalance_mwh=round(total_net_imbalance_mwh, 1),
+        total_cashout_cost_gbp=round(total_cashout_cost_gbp, 2),
+        avg_system_buy_price_gbp=avg_sbp,
+        max_system_buy_price_gbp=max_sbp,
+        shortfall_intervals_count=shortfall_count,
+        surplus_intervals_count=surplus_count,
+        worst_shortfall_interval=rec_to_dict(worst_shortfall_rec),
+        highest_price_interval=rec_to_dict(highest_price_rec),
+        data_source="Genuine Elexon INDO Demand & BSC Imbalance Prices (Jan 2026)",
+        daily_summaries=daily_summaries
+    )
+

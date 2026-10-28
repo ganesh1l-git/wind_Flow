@@ -56,5 +56,29 @@ class ElexonClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def fetch_demand_outturn_stream(
+        self,
+        settlement_date_from: str,
+        settlement_date_to: str
+    ) -> List[Dict[str, Any]]:
+        """Fetch real Initial National Demand Outturn (INDO) stream from Elexon."""
+        url = f"{self.base_url}/demand/outturn/stream?settlementDateFrom={settlement_date_from}&settlementDateTo={settlement_date_to}"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(url, headers=self.headers)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def fetch_system_prices(
+        self,
+        settlement_date: str
+    ) -> List[Dict[str, Any]]:
+        """Fetch real BSC System Buy/Sell Prices for given settlement date."""
+        url = f"{self.base_url}/balancing/settlement/system-prices/{settlement_date}"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(url, headers=self.headers)
+            resp.raise_for_status()
+            data = resp.json()
+            return data.get("data", [])
+
 
 elexon_client = ElexonClient()

@@ -4,7 +4,6 @@ import { ForecastDeskView } from "./components/ForecastDeskView";
 import { VarianceAnalyticsView } from "./components/VarianceAnalyticsView";
 import { ProcurementSimulatorView } from "./components/ProcurementSimulatorView";
 import { DataTable } from "./components/DataTable";
-import { MethodologyPanel } from "./components/MethodologyPanel";
 import { VintageInspectorModal } from "./components/VintageInspectorModal";
 import type {
   AnalysisResponse,
@@ -166,10 +165,6 @@ export const App: React.FC = () => {
                 onInspectInterval={handleInspectInterval}
                 onExportCsv={handleExportCsv}
               />
-            )}
-
-            {activeTab === "methodology" && (
-              <MethodologyPanel />
             )}
           </>
         ) : null}

@@ -25,7 +25,7 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
+        backgroundColor: "rgba(15, 23, 42, 0.4)",
         backdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
@@ -45,7 +45,7 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.8)",
+          boxShadow: "0 20px 40px rgba(15, 23, 42, 0.15), 0 0 0 1px var(--border-medium)",
           overflow: "hidden"
         }}
         onClick={(e) => e.stopPropagation()}
@@ -73,7 +73,7 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
             </div>
             <div>
               <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-white)" }}>
-                Forecast Vintage Audit & Zero Look-Ahead Verification
+                Forecast Vintage History & Gate Inspection
               </div>
               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                 Delivery Target: {data ? `${data.delivery_start_uk} (UTC: ${data.delivery_start})` : "Loading..."}
@@ -101,13 +101,13 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
               <div style={{
                 width: "24px",
                 height: "24px",
-                border: "2px solid rgba(255,255,255,0.1)",
+                border: "2px solid #cbd5e1",
                 borderTopColor: "var(--color-forecast)",
                 borderRadius: "50%",
                 animation: "spin 0.8s linear infinite"
               }} />
               <span style={{ marginTop: "12px", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
-                Auditing historical forecast vintages...
+                Loading historical forecast vintages...
               </span>
             </div>
           ) : (
@@ -150,12 +150,12 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
 
               {/* Analytical Explanation */}
               <div style={{
-                background: "rgba(56, 189, 248, 0.06)",
-                border: "1px solid rgba(56, 189, 248, 0.2)",
+                background: "rgba(2, 132, 199, 0.08)",
+                border: "1px solid rgba(2, 132, 199, 0.2)",
                 borderRadius: "var(--radius-sm)",
                 padding: "10px 12px",
-                fontSize: "0.72rem",
-                color: "#e0f2fe",
+                fontSize: "0.75rem",
+                color: "#0369a1",
                 marginBottom: "14px",
                 lineHeight: 1.5
               }}>
@@ -246,7 +246,7 @@ export const VintageInspectorModal: React.FC<VintageInspectorModalProps> = ({
           justifyContent: "flex-end"
         }}>
           <button className="btn-secondary" onClick={onClose}>
-            Close Audit Inspector
+            Close Inspector
           </button>
         </div>
       </div>

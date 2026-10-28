@@ -29,6 +29,12 @@ class IntervalRecord(BaseModel):
     has_actual: bool
     has_forecast: bool
     match_status: str  # "MATCHED", "MISSING_FORECAST", "MISSING_ACTUAL", "EXCLUDED"
+    demand_mw: Optional[float] = None  # Real Elexon INDO demand outturn (MW)
+    system_buy_price_gbp: Optional[float] = None  # Real Elexon BSC System Buy Price (£/MWh)
+    system_sell_price_gbp: Optional[float] = None  # Real Elexon BSC System Sell Price (£/MWh)
+    net_imbalance_volume_mwh: Optional[float] = None  # Real Elexon Net Imbalance Volume (MWh)
+    day_ahead_procured_mw: Optional[float] = None  # Real Demand - Forecast Wind
+    imbalance_cost_gbp: Optional[float] = None  # Cashout impact: Error MWh * Cashout Price
 
 
 class AccuracyMetrics(BaseModel):
@@ -120,13 +126,27 @@ class IntervalVintagesResponse(BaseModel):
 
 
 class ProcurementScenarioRequest(BaseModel):
-    illustrative_demand_mw: float = Field(default=30000.0, ge=0.0, le=100000.0)
+    illustrative_demand_mw: Optional[float] = Field(default=None, ge=0.0, le=100000.0)
+    portfolio_share_pct: float = Field(default=100.0, ge=0.1, le=100.0)
     decision_cutoff_time: str = "12:00"
     delivery_start: Optional[str] = None
+    custom_cashout_price_gbp: Optional[float] = None
+
+
+class DailyProcurementSummary(BaseModel):
+    date: str
+    demand_mwh: float
+    day_ahead_procured_mwh: float
+    actual_wind_mwh: float
+    forecast_wind_mwh: float
+    imbalance_mwh: float
+    cashout_cost_gbp: float
+    avg_system_buy_price: float
+    shortfall_intervals: int
 
 
 class ProcurementScenarioResponse(BaseModel):
-    illustrative_demand_mw: float
+    illustrative_demand_mw: float  # For backward-compatibility: active demand (real Elexon or user override)
     delivery_start: str
     selected_forecast_mw: float
     actual_generation_mw: Optional[float]
@@ -136,6 +156,34 @@ class ProcurementScenarioResponse(BaseModel):
     procurement_range_lower_mw: float
     procurement_range_upper_mw: float
     disclaimer: str
+    # Real Elexon additions
+    delivery_start_uk: Optional[str] = None
+    settlement_period: Optional[int] = None
+    elexon_demand_mw: Optional[float] = None  # Genuine Elexon INDO demand
+    portfolio_share_pct: float = 100.0
+    system_buy_price_gbp: Optional[float] = None  # Real Elexon SBP
+    system_sell_price_gbp: Optional[float] = None  # Real Elexon SSP
+    imbalance_mw: Optional[float] = None  # Forecast Wind - Actual Wind
+    imbalance_cost_gbp: Optional[float] = None  # Real cashout impact £
+    is_shortfall: bool = False
+    data_source: str = "Genuine Elexon INDO & BSC System Prices"
+
+
+class ProcurementOverviewResponse(BaseModel):
+    total_demand_mwh: float
+    total_day_ahead_procured_mwh: float
+    total_actual_procured_mwh: float
+    total_net_wind_imbalance_mwh: float
+    total_cashout_cost_gbp: float
+    avg_system_buy_price_gbp: float
+    max_system_buy_price_gbp: float
+    shortfall_intervals_count: int
+    surplus_intervals_count: int
+    worst_shortfall_interval: Optional[Dict[str, Any]] = None
+    highest_price_interval: Optional[Dict[str, Any]] = None
+    data_source: str
+    daily_summaries: List[DailyProcurementSummary]
+
 
 
 class HealthResponse(BaseModel):

@@ -85,19 +85,19 @@ export const ErrorAnalysisChart: React.FC<ErrorAnalysisChartProps> = ({
                   data={hourlyProfiles}
                   margin={{ top: 10, right: 16, left: 10, bottom: 20 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
                   <XAxis
                     dataKey="label"
                     stroke="#475569"
                     fontSize={11}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    axisLine={{ stroke: "#cbd5e1" }}
                   />
                   <YAxis
                     stroke="#475569"
                     fontSize={11}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    axisLine={{ stroke: "#cbd5e1" }}
                     tickFormatter={(v) => `${v} MW`}
                   />
                   <Tooltip
@@ -167,13 +167,13 @@ export const ErrorAnalysisChart: React.FC<ErrorAnalysisChartProps> = ({
                   data={errorDistribution}
                   margin={{ top: 10, right: 16, left: 10, bottom: 20 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
                   <XAxis
                     dataKey="label"
                     stroke="#475569"
                     fontSize={10}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    axisLine={{ stroke: "#cbd5e1" }}
                     interval={0}
                     angle={-25}
                     textAnchor="end"
@@ -182,7 +182,7 @@ export const ErrorAnalysisChart: React.FC<ErrorAnalysisChartProps> = ({
                     stroke="#475569"
                     fontSize={11}
                     tickLine={false}
-                    axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                    axisLine={{ stroke: "#cbd5e1" }}
                   />
                   <Tooltip
                     content={({ active, payload }) => {

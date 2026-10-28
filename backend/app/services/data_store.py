@@ -17,6 +17,8 @@ class DataStore:
     def __init__(self):
         self.actuals_by_start: Dict[str, Dict[str, Any]] = {}
         self.forecasts_by_target: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.demands_by_start: Dict[str, Dict[str, Any]] = {}
+        self.system_prices_by_start: Dict[str, Dict[str, Any]] = {}
         self.metadata: Dict[str, Any] = {}
         self.is_loaded: bool = False
 
@@ -33,6 +35,8 @@ class DataStore:
             self.metadata = data.get("metadata", {})
             actuals_list = data.get("actuals", [])
             forecasts_list = data.get("forecasts", [])
+            demands_list = data.get("demands", [])
+            prices_list = data.get("system_prices", [])
 
             self.actuals_by_start.clear()
             for act in actuals_list:
@@ -50,12 +54,26 @@ class DataStore:
             for st in self.forecasts_by_target:
                 self.forecasts_by_target[st].sort(key=lambda x: x.get("publishTime", ""))
 
+            self.demands_by_start.clear()
+            for dem in demands_list:
+                st = dem.get("startTime")
+                if st:
+                    self.demands_by_start[st] = dem
+
+            self.system_prices_by_start.clear()
+            for pr in prices_list:
+                st = pr.get("startTime")
+                if st:
+                    self.system_prices_by_start[st] = pr
+
             self.is_loaded = True
             logger.info(
-                "DataStore loaded successfully: %d actuals, %d forecast vintages across %d target intervals",
+                "DataStore loaded successfully: %d actuals, %d forecast vintages across %d intervals, %d demands, %d system prices",
                 len(self.actuals_by_start),
                 len(forecasts_list),
-                len(self.forecasts_by_target)
+                len(self.forecasts_by_target),
+                len(self.demands_by_start),
+                len(self.system_prices_by_start)
             )
             return True
         except Exception as e:
@@ -67,6 +85,12 @@ class DataStore:
 
     def get_forecast_vintages(self, start_time: str) -> List[Dict[str, Any]]:
         return self.forecasts_by_target.get(start_time, [])
+
+    def get_demand(self, start_time: str) -> Optional[Dict[str, Any]]:
+        return self.demands_by_start.get(start_time)
+
+    def get_system_price(self, start_time: str) -> Optional[Dict[str, Any]]:
+        return self.system_prices_by_start.get(start_time)
 
     def get_all_target_start_times(self) -> List[str]:
         # Return sorted union of actuals and forecast start times

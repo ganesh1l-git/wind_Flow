@@ -37,7 +37,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
 
   // Viewport time filter
   const [selectedRange, setSelectedRange] = useState<string>("all");
-  const [showUncertaintyBand, setShowUncertaintyBand] = useState<boolean>(true);
+  const [showUncertaintyBand, setShowUncertaintyBand] = useState<boolean>(false);
   const [applyBiasHaircut, setApplyBiasHaircut] = useState<boolean>(false);
 
   // Active hovered interval or pinned interval
@@ -103,8 +103,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   }, [filteredSeries, metrics.mae_mw, metrics.bias_mw]);
 
   // Interactive Procurement Simulator State
-  const [demandMw, setDemandMw] = useState<number>(30000);
-  const [cashoutPriceGbp, setCashoutPriceGbp] = useState<number>(85);
+  const [customDemandMw, setCustomDemandMw] = useState<number | null>(null);
+  const realDemand = activeInterval?.demand_mw || 32000;
+  const demandMw = customDemandMw !== null ? customDemandMw : realDemand;
+  const realSbp = activeInterval?.system_buy_price_gbp || 85;
+  const cashoutPriceGbp = realSbp;
 
   // Calculations for currently inspected interval
   const inspectedForecast = activeInterval?.forecast_generation_mw ?? (metrics.avg_forecast_mw || 12000);
@@ -114,7 +117,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   // Procurement math
   const dayAheadOrder = Math.max(0, Math.round(demandMw - inspectedForecast));
   const actualNetRequirement = Math.max(0, Math.round(demandMw - inspectedActual));
-  const imbalanceMwh = Math.abs(inspectedError);
+  const imbalanceMwh = Math.round(Math.abs(inspectedError) * 0.5);
   const estCashoutExposure = Math.round(imbalanceMwh * cashoutPriceGbp);
   const isShortfall = inspectedError > 0;
 
@@ -259,14 +262,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   </linearGradient>
                 </defs>
 
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
 
                 <XAxis
                   dataKey="time"
                   stroke="#475569"
                   fontSize={10}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   interval="preserveStartEnd"
                   minTickGap={45}
                 />
@@ -275,7 +278,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   stroke="#475569"
                   fontSize={10}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                   width={38}
                   domain={[0, 'auto']}
@@ -381,14 +384,14 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 margin={{ top: 10, right: 12, left: 0, bottom: 2 }}
                 onMouseMove={handleChartMouseMove}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" vertical={false} />
 
                 <XAxis
                   dataKey="time"
                   stroke="#475569"
                   fontSize={9}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   interval="preserveStartEnd"
                   minTickGap={45}
                 />
@@ -397,12 +400,12 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   stroke="#475569"
                   fontSize={9}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                   width={38}
                 />
 
-                <ReferenceLine y={0} stroke="rgba(255, 255, 255, 0.3)" strokeWidth={1} />
+                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
 
                 <Tooltip
                   content={({ active, payload }) => {
@@ -454,11 +457,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <button
               className="action-btn-sm"
               onClick={() => activeInterval && onInspectInterval(activeInterval.delivery_start)}
-              title="Audit all 24h forecast vintages leading up to cutoff"
+              title="Inspect all 24h forecast vintages leading up to cutoff"
               style={{ fontSize: "0.68rem", padding: "2px 7px" }}
             >
               <Search size={11} />
-              Audit Vintages
+              Inspect Vintages
             </button>
           </div>
 
@@ -550,7 +553,9 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           {/* Interactive Slider */}
           <div style={{ marginBottom: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
-              <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Illustrative Utility Demand:</span>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                {customDemandMw !== null ? "Custom Demand:" : "Elexon INDO Demand:"}
+              </span>
               <span className="font-mono" style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-white)" }}>
                 {demandMw.toLocaleString()} MW
               </span>
@@ -562,11 +567,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               max={45000}
               step={500}
               value={demandMw}
-              onChange={(e) => setDemandMw(Number(e.target.value))}
+              onChange={(e) => setCustomDemandMw(Number(e.target.value))}
             />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.62rem", color: "var(--text-muted)", marginTop: "2px" }}>
               <span>15k MW (Low)</span>
-              <span>30k MW (Base)</span>
+              <span>{realDemand.toLocaleString()} MW (Elexon Actual)</span>
               <span>45k MW (Peak)</span>
             </div>
           </div>
@@ -602,21 +607,13 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
-                <span>Est. Cashout Risk (SBP):</span>
-                <select
-                  className="control-select"
-                  style={{ fontSize: "0.65rem", padding: "1px 4px" }}
-                  value={cashoutPriceGbp}
-                  onChange={(e) => setCashoutPriceGbp(Number(e.target.value))}
-                >
-                  <option value={50}>£50/MWh (Off-Peak)</option>
-                  <option value={85}>£85/MWh (Base)</option>
-                  <option value={150}>£150/MWh (Tight)</option>
-                  <option value={300}>£300/MWh (Spike)</option>
-                </select>
+                <span>Real Elexon SBP:</span>
+                <span className="font-mono" style={{ color: "var(--color-forecast)", fontWeight: 700 }}>
+                  £{cashoutPriceGbp}/MWh
+                </span>
               </div>
               <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                {imbalanceMwh.toLocaleString()} MWh unbalanced volume
+                {imbalanceMwh.toLocaleString()} MWh deficit volume (30-min)
               </div>
             </div>
             <div className="font-mono" style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--color-deficit)" }}>

@@ -121,3 +121,18 @@ def test_procurement_scenario_endpoint(client):
     assert data["illustrative_demand_mw"] == 32000.0
     assert data["residual_procurement_mw"] >= 0
     assert "EDUCATIONAL DECISION-SUPPORT NOTICE" in data["disclaimer"]
+    assert "elexon_demand_mw" in data
+    assert "system_buy_price_gbp" in data
+
+
+def test_procurement_overview_endpoint(client):
+    response = client.get("/api/procurement-overview?cutoff_time=12:00")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_demand_mwh"] > 0
+    assert data["total_day_ahead_procured_mwh"] > 0
+    assert data["total_cashout_cost_gbp"] > 0
+    assert data["avg_system_buy_price_gbp"] > 0
+    assert len(data["daily_summaries"]) == 31
+    assert "Genuine Elexon" in data["data_source"]
+
