@@ -7,7 +7,7 @@ import type {
   ConfigResponse
 } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8001";
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(`${API_BASE}/health`);
